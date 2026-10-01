@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Carte des Blocages par Groupe</title>
+  <title>Carte des Blocages Collaboratives</title>
 
   <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -12,7 +12,7 @@
   <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
 
-  <!-- Babel pour le JSX -->
+  <!-- Babel pour JSX -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
   <!-- Leaflet JS -->
@@ -22,235 +22,40 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-    body, html, #root {
-      height: 100%;
-      width: 100%;
-      font-family: system-ui, -apple-system, sans-serif;
-    }
-    .app-container {
-      display: flex;
-      height: 100vh;
-      width: 100vw;
-      position: relative;
-    }
-    #map {
-      flex: 1;
-      height: 100%;
-      cursor: crosshair;
-    }
-    .top-bar {
-      position: absolute;
-      top: 15px;
-      left: 60px;
-      z-index: 1000;
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      align-items: center;
-    }
-    .group-selector {
-      background: white;
-      padding: 6px 12px;
-      border-radius: 8px;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-weight: bold;
-      font-size: 14px;
-    }
-    .group-input {
-      border: 1px solid #cbd5e1;
-      border-radius: 4px;
-      padding: 4px 8px;
-      font-size: 13px;
-      outline: none;
-    }
-    .ping-btn {
-      background-color: #3b82f6;
-      color: white;
-      border: none;
-      padding: 8px 14px;
-      font-weight: bold;
-      border-radius: 8px;
-      cursor: pointer;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 13px;
-    }
-    .ping-btn-danger {
-      background-color: #dc2626;
-    }
-    .ping-btn-danger:hover {
-      background-color: #b91c1c;
-    }
-    .ping-btn.active {
-      background-color: #15803d;
-    }
-    .chat-panel {
-      width: 380px;
-      border-left: 1px solid #e2e8f0;
-      display: flex;
-      flex-direction: column;
-      background-color: #ffffff;
-      position: relative;
-      z-index: 1001;
-    }
-    .chat-header {
-      padding: 1rem;
-      border-bottom: 1px solid #e2e8f0;
-      background-color: #f8fafc;
-    }
-    .close-btn {
-      position: absolute;
-      top: 12px;
-      right: 12px;
-      background: none;
-      border: none;
-      cursor: pointer;
-      font-size: 18px;
-      color: #64748b;
-    }
-    .status-badge {
-      display: inline-block;
-      padding: 3px 8px;
-      border-radius: 12px;
-      font-size: 11px;
-      font-weight: bold;
-      margin-top: 4px;
-    }
-    .status-proposition {
-      background-color: #fef3c7;
-      color: #b45309;
-    }
-    .status-confirme {
-      background-color: #dcfce7;
-      color: #15803d;
-    }
-    .status-danger {
-      background-color: #fee2e2;
-      color: #991b1b;
-      animation: pulse 2s infinite;
-    }
-
-    @keyframes pulse {
-      0% { opacity: 1; }
-      50% { opacity: 0.6; }
-      100% { opacity: 1; }
-    }
-
-    .votes-box {
-      margin-top: 8px;
-      padding: 8px;
-      background: #f8fafc;
-      border-radius: 6px;
-      border: 1px solid #e2e8f0;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 6px;
-    }
-    .vote-btn {
-      padding: 4px 8px;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 12px;
-      font-weight: 500;
-    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body, html, #root { height: 100%; width: 100%; font-family: system-ui, -apple-system, sans-serif; }
+    .app-container { display: flex; height: 100vh; width: 100vw; position: relative; }
+    #map { flex: 1; height: 100%; cursor: crosshair; }
+    .top-bar { position: absolute; top: 15px; left: 60px; z-index: 1000; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    .group-selector { background: white; padding: 6px 12px; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); display: flex; align-items: center; gap: 8px; font-weight: bold; font-size: 14px; }
+    .group-input { border: 1px solid #cbd5e1; border-radius: 4px; padding: 4px 8px; font-size: 13px; outline: none; }
+    .ping-btn { background-color: #3b82f6; color: white; border: none; padding: 8px 14px; font-weight: bold; border-radius: 8px; cursor: pointer; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); display: flex; align-items: center; gap: 6px; font-size: 13px; }
+    .ping-btn-danger { background-color: #dc2626; }
+    .ping-btn-danger:hover { background-color: #b91c1c; }
+    .ping-btn.active { background-color: #15803d; }
+    .chat-panel { width: 380px; border-left: 1px solid #e2e8f0; display: flex; flex-direction: column; background-color: #ffffff; position: relative; z-index: 1001; }
+    .chat-header { padding: 1rem; border-bottom: 1px solid #e2e8f0; background-color: #f8fafc; }
+    .close-btn { position: absolute; top: 12px; right: 12px; background: none; border: none; cursor: pointer; font-size: 18px; color: #64748b; }
+    .status-badge { display: inline-block; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; margin-top: 4px; }
+    .status-proposition { background-color: #fef3c7; color: #b45309; }
+    .status-confirme { background-color: #dcfce7; color: #15803d; }
+    .status-danger { background-color: #fee2e2; color: #991b1b; animation: pulse 2s infinite; }
+    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
+    .votes-box { margin-top: 8px; padding: 8px; background: #f8fafc; border-radius: 6px; border: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+    .vote-btn { padding: 4px 8px; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 500; }
     .btn-confirm { background-color: #dcfce7; color: #166534; }
-    .btn-confirm:hover { background-color: #bbf7d0; }
     .btn-reject { background-color: #fee2e2; color: #991b1b; }
-    .btn-reject:hover { background-color: #fecaca; }
-
-    .chat-messages {
-      flex: 1;
-      overflow-y: auto;
-      padding: 1rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
-    }
-    .message-card {
-      background-color: #f1f5f9;
-      padding: 0.75rem;
-      border-radius: 8px;
-    }
-    .message-author {
-      font-weight: bold;
-      font-size: 0.8rem;
-      color: #2563eb;
-    }
-    .message-time {
-      font-size: 0.7rem;
-      color: #64748b;
-      margin-left: 6px;
-    }
-    .chat-form {
-      display: flex;
-      flex-direction: column;
-      padding: 1rem;
-      gap: 0.5rem;
-      border-top: 1px solid #e2e8f0;
-    }
-    .pseudo-input {
-      padding: 0.4rem 0.6rem;
-      border: 1px solid #cbd5e1;
-      border-radius: 6px;
-      font-size: 0.85rem;
-      outline: none;
-    }
-    .chat-input-group {
-      display: flex;
-      gap: 0.5rem;
-    }
-    .chat-input {
-      flex: 1;
-      padding: 0.5rem 0.75rem;
-      border: 1px solid #cbd5e1;
-      border-radius: 6px;
-      outline: none;
-    }
-    .chat-button {
-      padding: 0.5rem 1rem;
-      background-color: #2563eb;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-    .chat-button:hover {
-      background-color: #1d4ed8;
-    }
-    .modal-ping {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: white;
-      padding: 20px;
-      border-radius: 12px;
-      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
-      z-index: 2000;
-      width: 340px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-    .modal-ping input, .modal-ping textarea, .modal-ping select {
-      width: 100%;
-      padding: 8px;
-      border: 1px solid #cbd5e1;
-      border-radius: 6px;
-      outline: none;
-    }
+    .chat-messages { flex: 1; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem; }
+    .message-card { background-color: #f1f5f9; padding: 0.75rem; border-radius: 8px; }
+    .message-author { font-weight: bold; font-size: 0.8rem; color: #2563eb; }
+    .message-time { font-size: 0.7rem; color: #64748b; margin-left: 6px; }
+    .chat-form { display: flex; flex-direction: column; padding: 1rem; gap: 0.5rem; border-top: 1px solid #e2e8f0; }
+    .pseudo-input { padding: 0.4rem 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.85rem; outline: none; }
+    .chat-input-group { display: flex; gap: 0.5rem; }
+    .chat-input { flex: 1; padding: 0.5rem 0.75rem; border: 1px solid #cbd5e1; border-radius: 6px; outline: none; }
+    .chat-button { padding: 0.5rem 1rem; background-color: #2563eb; color: white; border: none; border-radius: 6px; cursor: pointer; }
+    .modal-ping { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 12px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2); z-index: 2000; width: 340px; display: flex; flex-direction: column; gap: 10px; }
+    .modal-ping input, .modal-ping textarea { width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; outline: none; }
   </style>
 </head>
 <body>
@@ -260,73 +65,25 @@
   <script type="text/babel">
     const { useState, useEffect, useRef } = React;
 
-    const SUPABASE_URL = 'https://TON_PROJET.supabase.co';
-    const SUPABASE_ANON_KEY = 'TA_CLE_ANON';
+    // Remplace uniquement l'URL ci-dessous par celle de ton projet Supabase
+    const SUPABASE_URL = 'https://TON_PROJECT_REF.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_9j5oRwqGidbDfRlMRUk1zQ__ejvPHO1';
 
     let supabase = null;
-    if (SUPABASE_URL !== 'https://TON_PROJET.supabase.co') {
+    if (SUPABASE_URL !== 'https://TON_PROJECT_REF.supabase.co') {
       supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     }
 
-    const MOCK_BLOCUS = [
-      {
-        id: '1',
-        titre: 'Blocage Lycée Voltaire',
-        ville: 'Paris',
-        description: 'Rassemblement devant le portail principal.',
-        latitude: 48.8566,
-        longitude: 2.3522,
-        statut: 'confirme',
-        type: 'blocage',
-        confirmations: 12,
-        rejets: 1,
-        auteur: 'Alex',
-        groupe: 'Général'
-      },
-      {
-        id: '2',
-        titre: 'Intervention Forces de l\'ordre',
-        ville: 'Lyon',
-        description: 'Gaz lacrymogène et évacuation en cours.',
-        latitude: 45.7640,
-        longitude: 4.8357,
-        statut: 'danger',
-        type: 'danger',
-        confirmations: 8,
-        rejets: 0,
-        auteur: 'Sam',
-        groupe: 'Général'
-      },
-      {
-        id: '3',
-        titre: 'Blocage dépôt de bus',
-        ville: 'Nantes',
-        description: 'Interdiction de sortie des bus.',
-        latitude: 47.2183,
-        longitude: -1.5536,
-        statut: 'proposition',
-        type: 'blocage',
-        confirmations: 2,
-        rejets: 0,
-        auteur: 'Chris',
-        groupe: 'Secteur-Ouest'
-      }
-    ];
-
     function App() {
-      const [blocusList, setBlocusList] = useState(MOCK_BLOCUS);
+      const [blocusList, setBlocusList] = useState([]);
       const [selectedBlocus, setSelectedBlocus] = useState(null);
-      const [messages, setMessages] = useState([
-        { id: 'm1', created_at: new Date().toISOString(), auteur: 'Système', contenu: 'Bienvenue sur le chat du groupe !' }
-      ]);
+      const [messages, setMessages] = useState([]);
       const [newMessage, setNewMessage] = useState('');
       const [pseudo, setPseudo] = useState(localStorage.getItem('user_pseudo') || 'Anonyme');
 
-      // Système de Groupe
       const [currentGroup, setCurrentGroup] = useState(localStorage.getItem('user_group') || 'Général');
       const [tempGroupInput, setTempGroupInput] = useState('');
 
-      // Mode Ping
       const [isPinging, setIsPinging] = useState(false);
       const [pingTypeMode, setPingTypeMode] = useState('proposition');
       const [pingCoords, setPingCoords] = useState(null);
@@ -356,37 +113,45 @@
       useEffect(() => {
         if (!mapRef.current) {
           const map = L.map('map').setView([46.603354, 1.888334], 6);
-          
           L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', {
             attribution: '&copy; OpenStreetMap France',
             maxZoom: 20
           }).addTo(map);
-
           mapRef.current = map;
         }
 
         if (supabase) {
           fetchBlocus();
+
+          // Écoute des mises à jour des blocages en temps réel
+          const blocusChannel = supabase
+            .channel('public:blocus')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'blocus' }, () => {
+              fetchBlocus();
+            })
+            .subscribe();
+
+          return () => {
+            supabase.removeChannel(blocusChannel);
+          };
         }
       }, []);
 
       useEffect(() => {
         if (!mapRef.current) return;
-
         const handleMapClick = (e) => {
           if (isPinging) {
             setPingCoords({ lat: e.latlng.lat, lng: e.latlng.lng });
             setIsPinging(false);
           }
         };
-
         mapRef.current.on('click', handleMapClick);
         return () => {
           if (mapRef.current) mapRef.current.off('click', handleMapClick);
         };
       }, [isPinging]);
 
-      // Filtrage des marqueurs selon le groupe actif
+      // Rendu des marqueurs
       useEffect(() => {
         if (!mapRef.current) return;
 
@@ -397,7 +162,6 @@
 
         filteredList.forEach((b) => {
           let iconUrl = 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-orange.png';
-          
           if (b.type === 'danger' || b.statut === 'danger') {
             iconUrl = 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png';
           } else if (b.statut === 'confirme') {
@@ -418,23 +182,24 @@
           popupContent.innerHTML = `
             <h4 style="margin: 0 0 4px 0">${b.type === 'danger' ? '⚠️ ' : ''}${b.titre}</h4>
             <p style="margin: 0 0 4px 0; font-size: 11px; color: #64748b">Par <strong>${b.auteur || 'Anonyme'}</strong> (${b.ville})</p>
-            <p style="margin: 0 0 8px 0">${b.description}</p>
+            <p style="margin: 0 0 8px 0">${b.description || ''}</p>
             <button id="btn-${b.id}" style="padding: 6px 12px; background: ${b.type === 'danger' ? '#dc2626' : '#2563eb'}; color: white; border: none; border-radius: 4px; cursor: pointer; width: 100%;">
               Voir & Échanger
             </button>
           `;
 
           popupContent.querySelector(`#btn-${b.id}`).onclick = () => setSelectedBlocus(b);
-          
           marker.bindPopup(popupContent);
           markersRef.current[b.id] = marker;
         });
       }, [blocusList, currentGroup]);
 
       const fetchBlocus = async () => {
+        if (!supabase) return;
         const { data, error } = await supabase.from('blocus').select('*');
-        if (!error && data && data.length > 0) {
+        if (!error && data) {
           setBlocusList(data);
+          setSelectedBlocus(prev => prev ? data.find(b => b.id === prev.id) || null : null);
         }
       };
 
@@ -443,9 +208,7 @@
         if (!newPingData.titre || !pingCoords) return;
 
         const isDanger = newPingData.type === 'danger';
-
-        const newBlocus = {
-          id: Date.now().toString(),
+        const payload = {
           titre: newPingData.titre,
           ville: newPingData.ville || 'Inconnue',
           description: newPingData.description,
@@ -460,22 +223,7 @@
         };
 
         if (supabase) {
-          const { data, error } = await supabase.from('blocus').insert([{
-            titre: newPingData.titre,
-            ville: newPingData.ville || 'Inconnue',
-            description: newPingData.description,
-            latitude: pingCoords.lat,
-            longitude: pingCoords.lng,
-            statut: isDanger ? 'danger' : 'proposition',
-            type: newPingData.type,
-            confirmations: 1,
-            rejets: 0,
-            auteur: pseudo,
-            groupe: currentGroup
-          }]).select();
-          if (!error && data) setBlocusList(prev => [...prev, data[0]]);
-        } else {
-          setBlocusList(prev => [...prev, newBlocus]);
+          await supabase.from('blocus').insert([payload]);
         }
 
         setPingCoords(null);
@@ -483,37 +231,24 @@
       };
 
       const handleVote = async (type) => {
-        if (!selectedBlocus) return;
+        if (!selectedBlocus || !supabase) return;
 
-        const updatedList = blocusList.map((b) => {
-          if (b.id === selectedBlocus.id) {
-            const confs = type === 'confirm' ? b.confirmations + 1 : b.confirmations;
-            const rejs = type === 'reject' ? b.rejets + 1 : b.rejets;
-            
-            let newStatus = b.statut;
-            if (b.type !== 'danger' && confs >= 3) {
-              newStatus = 'confirme';
-            }
-
-            const updated = { ...b, confirmations: confs, rejets: rejs, statut: newStatus };
-            setSelectedBlocus(updated);
-            return updated;
-          }
-          return b;
-        });
-
-        setBlocusList(updatedList);
-
-        if (supabase) {
-          const target = updatedList.find(b => b.id === selectedBlocus.id);
-          await supabase.from('blocus').update({
-            confirmations: target.confirmations,
-            rejets: target.rejets,
-            statut: target.statut
-          }).eq('id', selectedBlocus.id);
+        const confs = type === 'confirm' ? (selectedBlocus.confirmations || 0) + 1 : selectedBlocus.confirmations;
+        const rejs = type === 'reject' ? (selectedBlocus.rejets || 0) + 1 : selectedBlocus.rejets;
+        
+        let newStatus = selectedBlocus.statut;
+        if (selectedBlocus.type !== 'danger' && confs >= 3) {
+          newStatus = 'confirme';
         }
+
+        await supabase.from('blocus').update({
+          confirmations: confs,
+          rejets: rejs,
+          statut: newStatus
+        }).eq('id', selectedBlocus.id);
       };
 
+      // Écoute des messages en temps réel
       useEffect(() => {
         if (!selectedBlocus || !supabase) return;
 
@@ -525,9 +260,8 @@
           .then(({ data }) => setMessages(data || []));
 
         const channel = supabase
-          .channel(`chat-${selectedBlocus.id}`)
-          .on(
-            'postgres_changes',
+          .channel(`messages-${selectedBlocus.id}`)
+          .on('postgres_changes', 
             { event: 'INSERT', schema: 'public', table: 'messages', filter: `blocus_id=eq.${selectedBlocus.id}` },
             (payload) => setMessages((prev) => [...prev, payload.new])
           )
@@ -540,24 +274,19 @@
 
       const sendMessage = async (e) => {
         e.preventDefault();
-        if (!newMessage.trim() || !selectedBlocus) return;
+        if (!newMessage.trim() || !selectedBlocus || !supabase) return;
 
-        const payload = { blocus_id: selectedBlocus.id, auteur: pseudo, contenu: newMessage };
+        await supabase.from('messages').insert([{
+          blocus_id: selectedBlocus.id,
+          auteur: pseudo,
+          contenu: newMessage
+        }]);
 
-        if (supabase) {
-          await supabase.from('messages').insert([payload]);
-        } else {
-          setMessages((prev) => [
-            ...prev,
-            { id: Date.now().toString(), created_at: new Date().toISOString(), auteur: pseudo, contenu: newMessage }
-          ]);
-        }
         setNewMessage('');
       };
 
       return (
         <div className="app-container">
-          {/* Barre supérieure avec sélecteur de groupe & boutons d'actions */}
           <div className="top-bar">
             <div className="group-selector">
               <span>👥 Groupe :</span>
@@ -601,7 +330,6 @@
 
           <div id="map"></div>
 
-          {/* Formulaire de création */}
           {pingCoords && (
             <form className="modal-ping" onSubmit={handleCreatePing}>
               <h3 style={{ margin: 0, color: newPingData.type === 'danger' ? '#dc2626' : '#000' }}>
@@ -618,7 +346,7 @@
               />
               <input 
                 type="text" 
-                placeholder={newPingData.type === 'danger' ? "Intitulé du danger (ex: Charge de police)" : "Titre (ex: Blocage Lycée X)"} 
+                placeholder={newPingData.type === 'danger' ? "Intitulé du danger" : "Titre (ex: Blocage Gare)"} 
                 value={newPingData.titre}
                 onChange={(e) => setNewPingData({...newPingData, titre: e.target.value})}
                 required
@@ -647,7 +375,6 @@
             </form>
           )}
 
-          {/* Panneau latéral */}
           {selectedBlocus && (
             <div className="chat-panel">
               <button className="close-btn" onClick={() => setSelectedBlocus(null)}>✕</button>

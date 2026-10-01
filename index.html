@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Carte des Blocages par Groupe</title>
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+  <!-- React & ReactDOM (CDN) -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+
+  <!-- Babel pour le JSX -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- Supabase JS -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body, html, #root {
+      height: 100%;
+      width: 100%;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+    .app-container {
+      display: flex;
+      height: 100vh;
+      width: 100vw;
+      position: relative;
+    }
+    #map {
+      flex: 1;
+      height: 100%;
+      cursor: crosshair;
+    }
+    .top-bar {
+      position: absolute;
+      top: 15px;
+      left: 60px;
+      z-index: 1000;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .group-selector {
+      background: white;
+      padding: 6px 12px;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: bold;
+      font-size: 14px;
+    }
+    .group-input {
+      border: 1px solid #cbd5e1;
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-size: 13px;
+      outline: none;
+    }
+    .ping-btn {
+      background-color: #3b82f6;
+      color: white;
+      border: none;
+      padding: 8px 14px;
+      font-weight: bold;
+      border-radius: 8px;
+      cursor: pointer;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+    }
+    .ping-btn-danger {
+      background-color: #dc2626;
+    }
+    .ping-btn-danger:hover {
+      background-color: #b91c1c;
+    }
+    .ping-btn.active {
+      background-color: #15803d;
+    }
+    .chat-panel {
+      width: 380px;
+      border-left: 1px solid #e2e8f0;
+      display: flex;
+      flex-direction: column;
+      background-color: #ffffff;
+      position: relative;
+      z-index: 1001;
+    }
+    .chat-header {
+      padding: 1rem;
+      border-bottom: 1px solid #e2e8f0;
+      background-color: #f8fafc;
+    }
+    .close-btn {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 18px;
+      color: #64748b;
+    }
+    .status-badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: bold;
+      margin-top: 4px;
+    }
+    .status-proposition {
+      background-color: #fef3c7;
+      color: #b45309;
+    }
+    .status-confirme {
+      background-color: #dcfce7;
+      color: #15803d;
+    }
+    .status-danger {
+      background-color: #fee2e2;
+      color: #991b1b;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.6; }
+      100% { opacity: 1; }
+    }
+
+    .votes-box {
+      margin-top: 8px;
+      padding: 8px;
+      background: #f8fafc;
+      border-radius: 6px;
+      border: 1px solid #e2e8f0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+    }
+    .vote-btn {
+      padding: 4px 8px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    .btn-confirm { background-color: #dcfce7; color: #166534; }
+    .btn-confirm:hover { background-color: #bbf7d0; }
+    .btn-reject { background-color: #fee2e2; color: #991b1b; }
+    .btn-reject:hover { background-color: #fecaca; }
+
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .message-card {
+      background-color: #f1f5f9;
+      padding: 0.75rem;
+      border-radius: 8px;
+    }
+    .message-author {
+      font-weight: bold;
+      font-size: 0.8rem;
+      color: #2563eb;
+    }
+    .message-time {
+      font-size: 0.7rem;
+      color: #64748b;
+      margin-left: 6px;
+    }
+    .chat-form {
+      display: flex;
+      flex-direction: column;
+      padding: 1rem;
+      gap: 0.5rem;
+      border-top: 1px solid #e2e8f0;
+    }
+    .pseudo-input {
+      padding: 0.4rem 0.6rem;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      outline: none;
+    }
+    .chat-input-group {
+      display: flex;
+      gap: 0.5rem;
+    }
+    .chat-input {
+      flex: 1;
+      padding: 0.5rem 0.75rem;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      outline: none;
+    }
+    .chat-button {
+      padding: 0.5rem 1rem;
+      background-color: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .chat-button:hover {
+      background-color: #1d4ed8;
+    }
+    .modal-ping {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
+      z-index: 2000;
+      width: 340px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .modal-ping input, .modal-ping textarea, .modal-ping select {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      outline: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    const SUPABASE_URL = 'https://TON_PROJET.supabase.co';
+    const SUPABASE_ANON_KEY = 'TA_CLE_ANON';
+
+    let supabase = null;
+    if (SUPABASE_URL !== 'https://TON_PROJET.supabase.co') {
+      supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    }
+
+    const MOCK_BLOCUS = [
+      {
+        id: '1',
+        titre: 'Blocage Lycée Voltaire',
+        ville: 'Paris',
+        description: 'Rassemblement devant le portail principal.',
+        latitude: 48.8566,
+        longitude: 2.3522,
+        statut: 'confirme',
+        type: 'blocage',
+        confirmations: 12,
+        rejets: 1,
+        auteur: 'Alex',
+        groupe: 'Général'
+      },
+      {
+        id: '2',
+        titre: 'Intervention Forces de l\'ordre',
+        ville: 'Lyon',
+        description: 'Gaz lacrymogène et évacuation en cours.',
+        latitude: 45.7640,
+        longitude: 4.8357,
+        statut: 'danger',
+        type: 'danger',
+        confirmations: 8,
+        rejets: 0,
+        auteur: 'Sam',
+        groupe: 'Général'
+      },
+      {
+        id: '3',
+        titre: 'Blocage dépôt de bus',
+        ville: 'Nantes',
+        description: 'Interdiction de sortie des bus.',
+        latitude: 47.2183,
+        longitude: -1.5536,
+        statut: 'proposition',
+        type: 'blocage',
+        confirmations: 2,
+        rejets: 0,
+        auteur: 'Chris',
+        groupe: 'Secteur-Ouest'
+      }
+    ];
+
+    function App() {
+      const [blocusList, setBlocusList] = useState(MOCK_BLOCUS);
+      const [selectedBlocus, setSelectedBlocus] = useState(null);
+      const [messages, setMessages] = useState([
+        { id: 'm1', created_at: new Date().toISOString(), auteur: 'Système', contenu: 'Bienvenue sur le chat du groupe !' }
+      ]);
+      const [newMessage, setNewMessage] = useState('');
+      const [pseudo, setPseudo] = useState(localStorage.getItem('user_pseudo') || 'Anonyme');
+
+      // Système de Groupe
+      const [currentGroup, setCurrentGroup] = useState(localStorage.getItem('user_group') || 'Général');
+      const [tempGroupInput, setTempGroupInput] = useState('');
+
+      // Mode Ping
+      const [isPinging, setIsPinging] = useState(false);
+      const [pingTypeMode, setPingTypeMode] = useState('proposition');
+      const [pingCoords, setPingCoords] = useState(null);
+      const [newPingData, setNewPingData] = useState({ titre: '', ville: '', description: '', type: 'proposition' });
+
+      const mapRef = useRef(null);
+      const markersRef = useRef({});
+
+      const handlePseudoChange = (val) => {
+        setPseudo(val);
+        localStorage.setItem('user_pseudo', val);
+      };
+
+      const handleGroupChange = (newGrp) => {
+        const groupName = newGrp.trim() || 'Général';
+        setCurrentGroup(groupName);
+        localStorage.setItem('user_group', groupName);
+        setSelectedBlocus(null);
+      };
+
+      const startPingMode = (type) => {
+        setPingTypeMode(type);
+        setIsPinging(true);
+        setNewPingData(prev => ({ ...prev, type: type }));
+      };
+
+      useEffect(() => {
+        if (!mapRef.current) {
+          const map = L.map('map').setView([46.603354, 1.888334], 6);
+          
+          L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap France',
+            maxZoom: 20
+          }).addTo(map);
+
+          mapRef.current = map;
+        }
+
+        if (supabase) {
+          fetchBlocus();
+        }
+      }, []);
+
+      useEffect(() => {
+        if (!mapRef.current) return;
+
+        const handleMapClick = (e) => {
+          if (isPinging) {
+            setPingCoords({ lat: e.latlng.lat, lng: e.latlng.lng });
+            setIsPinging(false);
+          }
+        };
+
+        mapRef.current.on('click', handleMapClick);
+        return () => {
+          if (mapRef.current) mapRef.current.off('click', handleMapClick);
+        };
+      }, [isPinging]);
+
+      // Filtrage des marqueurs selon le groupe actif
+      useEffect(() => {
+        if (!mapRef.current) return;
+
+        Object.values(markersRef.current).forEach(m => m.remove());
+        markersRef.current = {};
+
+        const filteredList = blocusList.filter(b => (b.groupe || 'Général') === currentGroup);
+
+        filteredList.forEach((b) => {
+          let iconUrl = 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-orange.png';
+          
+          if (b.type === 'danger' || b.statut === 'danger') {
+            iconUrl = 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png';
+          } else if (b.statut === 'confirme') {
+            iconUrl = 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png';
+          }
+
+          const customIcon = L.icon({
+            iconUrl: iconUrl,
+            shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34]
+          });
+
+          const marker = L.marker([b.latitude, b.longitude], { icon: customIcon }).addTo(mapRef.current);
+          
+          const popupContent = document.createElement('div');
+          popupContent.innerHTML = `
+            <h4 style="margin: 0 0 4px 0">${b.type === 'danger' ? '⚠️ ' : ''}${b.titre}</h4>
+            <p style="margin: 0 0 4px 0; font-size: 11px; color: #64748b">Par <strong>${b.auteur || 'Anonyme'}</strong> (${b.ville})</p>
+            <p style="margin: 0 0 8px 0">${b.description}</p>
+            <button id="btn-${b.id}" style="padding: 6px 12px; background: ${b.type === 'danger' ? '#dc2626' : '#2563eb'}; color: white; border: none; border-radius: 4px; cursor: pointer; width: 100%;">
+              Voir & Échanger
+            </button>
+          `;
+
+          popupContent.querySelector(`#btn-${b.id}`).onclick = () => setSelectedBlocus(b);
+          
+          marker.bindPopup(popupContent);
+          markersRef.current[b.id] = marker;
+        });
+      }, [blocusList, currentGroup]);
+
+      const fetchBlocus = async () => {
+        const { data, error } = await supabase.from('blocus').select('*');
+        if (!error && data && data.length > 0) {
+          setBlocusList(data);
+        }
+      };
+
+      const handleCreatePing = async (e) => {
+        e.preventDefault();
+        if (!newPingData.titre || !pingCoords) return;
+
+        const isDanger = newPingData.type === 'danger';
+
+        const newBlocus = {
+          id: Date.now().toString(),
+          titre: newPingData.titre,
+          ville: newPingData.ville || 'Inconnue',
+          description: newPingData.description,
+          latitude: pingCoords.lat,
+          longitude: pingCoords.lng,
+          statut: isDanger ? 'danger' : 'proposition',
+          type: newPingData.type,
+          confirmations: 1,
+          rejets: 0,
+          auteur: pseudo,
+          groupe: currentGroup
+        };
+
+        if (supabase) {
+          const { data, error } = await supabase.from('blocus').insert([{
+            titre: newPingData.titre,
+            ville: newPingData.ville || 'Inconnue',
+            description: newPingData.description,
+            latitude: pingCoords.lat,
+            longitude: pingCoords.lng,
+            statut: isDanger ? 'danger' : 'proposition',
+            type: newPingData.type,
+            confirmations: 1,
+            rejets: 0,
+            auteur: pseudo,
+            groupe: currentGroup
+          }]).select();
+          if (!error && data) setBlocusList(prev => [...prev, data[0]]);
+        } else {
+          setBlocusList(prev => [...prev, newBlocus]);
+        }
+
+        setPingCoords(null);
+        setNewPingData({ titre: '', ville: '', description: '', type: 'proposition' });
+      };
+
+      const handleVote = async (type) => {
+        if (!selectedBlocus) return;
+
+        const updatedList = blocusList.map((b) => {
+          if (b.id === selectedBlocus.id) {
+            const confs = type === 'confirm' ? b.confirmations + 1 : b.confirmations;
+            const rejs = type === 'reject' ? b.rejets + 1 : b.rejets;
+            
+            let newStatus = b.statut;
+            if (b.type !== 'danger' && confs >= 3) {
+              newStatus = 'confirme';
+            }
+
+            const updated = { ...b, confirmations: confs, rejets: rejs, statut: newStatus };
+            setSelectedBlocus(updated);
+            return updated;
+          }
+          return b;
+        });
+
+        setBlocusList(updatedList);
+
+        if (supabase) {
+          const target = updatedList.find(b => b.id === selectedBlocus.id);
+          await supabase.from('blocus').update({
+            confirmations: target.confirmations,
+            rejets: target.rejets,
+            statut: target.statut
+          }).eq('id', selectedBlocus.id);
+        }
+      };
+
+      useEffect(() => {
+        if (!selectedBlocus || !supabase) return;
+
+        supabase
+          .from('messages')
+          .select('*')
+          .eq('blocus_id', selectedBlocus.id)
+          .order('created_at', { ascending: true })
+          .then(({ data }) => setMessages(data || []));
+
+        const channel = supabase
+          .channel(`chat-${selectedBlocus.id}`)
+          .on(
+            'postgres_changes',
+            { event: 'INSERT', schema: 'public', table: 'messages', filter: `blocus_id=eq.${selectedBlocus.id}` },
+            (payload) => setMessages((prev) => [...prev, payload.new])
+          )
+          .subscribe();
+
+        return () => {
+          supabase.removeChannel(channel);
+        };
+      }, [selectedBlocus]);
+
+      const sendMessage = async (e) => {
+        e.preventDefault();
+        if (!newMessage.trim() || !selectedBlocus) return;
+
+        const payload = { blocus_id: selectedBlocus.id, auteur: pseudo, contenu: newMessage };
+
+        if (supabase) {
+          await supabase.from('messages').insert([payload]);
+        } else {
+          setMessages((prev) => [
+            ...prev,
+            { id: Date.now().toString(), created_at: new Date().toISOString(), auteur: pseudo, contenu: newMessage }
+          ]);
+        }
+        setNewMessage('');
+      };
+
+      return (
+        <div className="app-container">
+          {/* Barre supérieure avec sélecteur de groupe & boutons d'actions */}
+          <div className="top-bar">
+            <div className="group-selector">
+              <span>👥 Groupe :</span>
+              <span style={{ color: '#2563eb' }}>{currentGroup}</span>
+              <input
+                type="text"
+                className="group-input"
+                placeholder="Rejoindre un groupe..."
+                value={tempGroupInput}
+                onChange={(e) => setTempGroupInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleGroupChange(tempGroupInput);
+                    setTempGroupInput('');
+                  }
+                }}
+              />
+              {currentGroup !== 'Général' && (
+                <button 
+                  onClick={() => handleGroupChange('Général')}
+                  style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '11px', textDecoration: 'underline' }}
+                >
+                  Quitter
+                </button>
+              )}
+            </div>
+
+            <button 
+              className={`ping-btn ${isPinging && pingTypeMode === 'proposition' ? 'active' : ''}`}
+              onClick={() => startPingMode('proposition')}
+            >
+              📍 Proposer un blocage
+            </button>
+            <button 
+              className={`ping-btn ping-btn-danger ${isPinging && pingTypeMode === 'danger' ? 'active' : ''}`}
+              onClick={() => startPingMode('danger')}
+            >
+              ⚠️ Signalement DANGER
+            </button>
+          </div>
+
+          <div id="map"></div>
+
+          {/* Formulaire de création */}
+          {pingCoords && (
+            <form className="modal-ping" onSubmit={handleCreatePing}>
+              <h3 style={{ margin: 0, color: newPingData.type === 'danger' ? '#dc2626' : '#000' }}>
+                {newPingData.type === 'danger' ? '⚠️ Signalement DANGER' : '📍 Proposer un Blocage'}
+              </h3>
+              <p style={{ fontSize: '11px', color: '#64748b' }}>Sera partagé uniquement dans le groupe : <strong>{currentGroup}</strong></p>
+              
+              <input 
+                type="text" 
+                placeholder="Ton pseudo" 
+                value={pseudo}
+                onChange={(e) => handlePseudoChange(e.target.value)}
+                required
+              />
+              <input 
+                type="text" 
+                placeholder={newPingData.type === 'danger' ? "Intitulé du danger (ex: Charge de police)" : "Titre (ex: Blocage Lycée X)"} 
+                value={newPingData.titre}
+                onChange={(e) => setNewPingData({...newPingData, titre: e.target.value})}
+                required
+              />
+              <input 
+                type="text" 
+                placeholder="Ville" 
+                value={newPingData.ville}
+                onChange={(e) => setNewPingData({...newPingData, ville: e.target.value})}
+              />
+              <textarea 
+                placeholder="Détails importants..." 
+                value={newPingData.description}
+                onChange={(e) => setNewPingData({...newPingData, description: e.target.value})}
+                rows="3"
+              />
+              
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button type="submit" className="chat-button" style={{ flex: 1, backgroundColor: newPingData.type === 'danger' ? '#dc2626' : '#2563eb' }}>
+                  Publier
+                </button>
+                <button type="button" onClick={() => setPingCoords(null)} style={{ padding: '8px', background: '#ccc', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>
+                  Annuler
+                </button>
+              </div>
+            </form>
+          )}
+
+          {/* Panneau latéral */}
+          {selectedBlocus && (
+            <div className="chat-panel">
+              <button className="close-btn" onClick={() => setSelectedBlocus(null)}>✕</button>
+              <div className="chat-header">
+                <h3>{selectedBlocus.titre}</h3>
+                <p style={{ fontSize: '12px', color: '#64748b' }}>
+                  Signalé par <strong>{selectedBlocus.auteur || 'Anonyme'}</strong> — {selectedBlocus.ville}
+                </p>
+                <p style={{ fontSize: '11px', color: '#3b82f6', marginTop: '2px' }}>
+                  👥 Groupe : {selectedBlocus.groupe || 'Général'}
+                </p>
+                
+                {selectedBlocus.type === 'danger' || selectedBlocus.statut === 'danger' ? (
+                  <span className="status-badge status-danger">
+                    🚨 ALERTE DANGER / INTERVENTION
+                  </span>
+                ) : (
+                  <span className={`status-badge ${selectedBlocus.statut === 'confirme' ? 'status-confirme' : 'status-proposition'}`}>
+                    {selectedBlocus.statut === 'confirme' ? '✓ Blocage Confirmé' : '⌛ Proposition en attente'}
+                  </span>
+                )}
+
+                <div className="votes-box">
+                  <span style={{ fontSize: '12px' }}>Fiabilité :</span>
+                  <button className="vote-btn btn-confirm" onClick={() => handleVote('confirm')}>
+                    👍 Confirmer ({selectedBlocus.confirmations || 0})
+                  </button>
+                  <button className="vote-btn btn-reject" onClick={() => handleVote('reject')}>
+                    👎 Invalider ({selectedBlocus.rejets || 0})
+                  </button>
+                </div>
+              </div>
+
+              <div className="chat-messages">
+                {messages.map((m) => (
+                  <div key={m.id} className="message-card">
+                    <div>
+                      <span className="message-author">{m.auteur || 'Anonyme'}</span>
+                      <span className="message-time">
+                        {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                    <p style={{ marginTop: '4px' }}>{m.contenu}</p>
+                  </div>
+                ))}
+              </div>
+
+              <form onSubmit={sendMessage} className="chat-form">
+                <input
+                  type="text"
+                  className="pseudo-input"
+                  value={pseudo}
+                  onChange={(e) => handlePseudoChange(e.target.value)}
+                  placeholder="Ton pseudo"
+                  required
+                />
+                <div className="chat-input-group">
+                  <input
+                    type="text"
+                    className="chat-input"
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    placeholder="Message..."
+                  />
+                  <button type="submit" className="chat-button">Envoyer</button>
+                </div>
+              </form>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
